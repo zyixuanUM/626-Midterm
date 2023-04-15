@@ -82,11 +82,15 @@ The summarized tables and ROC plots are in the code.
 ## Comments on results and further improvement the classification accuracy.
 For the binary classifier, there are several methods get the 100% accuracy, so we don't need to improve it.
 <br/>
+
 However, for the multi-class classifier, there are still space for us to improve it. As I missing some opportunities and submitted a wrong submitted file, I don't have any effective accuracy of testing data here. But I can provide some further improvement as follows.
 <br/>
+
 Specificly, we can try the function caretStack(all.models, ...) in the R package "caretEnsemble". This function is used to find a good linear combination of several classification or regression models, using either linear regression, elastic net regression, or greedy optimization.
 <br/>
+
 We can first use the caretList to build a list of models, or directly build the models by train(x, ...), then make a linear regression ensemble by the code caretStack(all.models, method='glm', trControl), or combine with the randomforest like caretStack(all.models, method='rf', trControl). 
+
 <br/>
 This method of combining several predictive models via stacking may have a better accuracy on the testing data.
 
