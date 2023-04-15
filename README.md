@@ -99,7 +99,7 @@ Accuracy: 98.07%
 
 The summarized tables and ROC plots are in the code.
 
-## Comments on results and further improvement the classification accuracy.
+## Comments on results and further improvement the classification accuracy
 The result of each classification from the training data can be seen in table() or confusionMatrix().
 <br/>
 For the binary classifier, there are several methods that get 100% accuracy, so we don't need to improve it. Choose the SVM with linear kernel as the final algorithm for it has 100% accuracy with the fastest system time.
