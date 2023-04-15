@@ -9,7 +9,7 @@ A group of volunteers, aged between 19 and 48, are recruited to participate in t
 There are two data files in this code. One is the "training data", used to check whether the model fits well and compute and plot the accuracy by the pROC package to see the difference between them. Another data file is the "test data", for which to create the submitted files and check the accuracy through the leaderboard, then try the best to improve it. 
 
 ## Methods
-In this projects' classifier, we use several methods to build classifiers, such as logistic regression, GLM with elastic net, lasso regression, ridge regression, linear discriminant analysis, SVM with linear kernel or radial kernel, neural network, adaboost, bagging, randomforest, etc. Through these models, use different packages and diffrent parameters to adjust the results, in order to get the best answer. One of the method and accuracy of them are as follows. Most of the functions come from the caret package and other required packages.
+In this project's classifier, we use several methods to build classifiers, such as logistic regression, GLM with elastic net, lasso regression, ridge regression, linear discriminant analysis, SVM with linear kernel or radial kernel, neural network, adaboost, bagging, randomforest, etc. Through these models, use different packages and different parameters to adjust the results, in order to get the best answer. One of the methods and their accuracy are as follows. Most of the functions come from the caret package and other required packages.
 <br/>
 
 Split the training data into training and testing data by using sample() function, then use the training to build the model and use the testing to predict the model by using predict() function and compute the accuracy.
@@ -100,21 +100,21 @@ Accuracy: 98.07%
 The summarized tables and ROC plots are in the code.
 
 ## Comments on results and further improvement the classification accuracy.
-The result of each classification from the training data can be seen from table() or confusionMatirx().
+The result of each classification from the training data can be seen in table() or confusionMatrix().
 <br/>
-For the binary classifier, there are several methods get the 100% accuracy, so we don't need to improve it. Choose the SVM with linear kernel as the final alogorithm for it has a 100% accuracy with the fastest system time.
-<br/>
-
-However, for the multi-class classifier, there are still space for us to improve it. As I missing some opportunities and submitted a wrong submitted file, I don't have any effective accuracy of testing data here. But I can provide some further improvement as follows. Also choose the SVM with linear kernel as the final alogorithm for it has one of the highest accuracies with the fastest system time.
+For the binary classifier, there are several methods that get 100% accuracy, so we don't need to improve it. Choose the SVM with linear kernel as the final algorithm for it has 100% accuracy with the fastest system time.
 <br/>
 
-Specificly, we can try the function caretStack(all.models, ...) in the R package "caretEnsemble". This function is used to find a good linear combination of several classification or regression models, using either linear regression, elastic net regression, or greedy optimization.
+However, for the multi-class classifier, there is still space for us to improve it. As I missed some opportunities and submitted a wrong submitted file, I don't have any effective accuracy of testing data here. But I can provide some further improvements as follows. Also, choose the SVM with linear kernel as the final algorithm for it has one of the highest accuracies with the fastest system time.
+<br/>
+
+Specifically, we can try the function caretStack(all.models, ...) in the R package "caretEnsemble". This function is used to find a good linear combination of several classification or regression models, using either linear regression, elastic net regression, or greedy optimization.
 <br/>
 
 We can first use the caretList to build a list of models, or directly build the models by train(x, ...), then make a linear regression ensemble by the code caretStack(all.models, method='glm', trControl), or combine with the randomforest like caretStack(all.models, method='rf', trControl). 
 
 <br/>
-This method of combining several predictive models via stacking may have a better accuracy on the testing data.
+This method of combining several predictive models via stacking may have better accuracy on the testing data.
 
 
 
