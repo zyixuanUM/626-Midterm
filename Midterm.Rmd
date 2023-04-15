@@ -1,0 +1,390 @@
+---
+title: "Midterm"
+output: html_document
+date: "2023-04-15"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, warning = FALSE)
+```
+
+Import data
+
+```{r}
+training_data <- read.table("/Users/cengyixuan/Documents/626/Midterm/training_data.txt", header = T)
+test_data <- read.table("/Users/cengyixuan/Documents/626/Midterm/test_data.txt", header = T)
+
+# Construct binary and multi class variable
+training_data$binary = factor(ifelse(training_data$activity > 3, 0, 1))
+training_data$multi = factor(ifelse(training_data$activity > 6, 7, training_data$activity))
+
+training_data <- training_data[,-c(1,2)]
+test_data <- test_data[, -1]
+```
+
+```{r}
+# Create Training Data
+ind <- sample(nrow(training_data), nrow(training_data) * 0.7)
+training <- training_data[ind,]
+testing <- training_data[-ind,]
+
+training1 <- training[, - 563]
+training2 <- training[, - 562]
+testing1 <- testing[, - 563]
+testing2 <- testing[, - 562]
+```
+
+**1. Binary Classifier**
+
+a.  Logistic Regression
+
+```{r}
+glm.fits = glm(binary ~ .,data=training1, family=binomial)
+glm.probs = predict(glm.fits, testing1, type="response")
+glm.pred = rep(0, dim(testing1)[1])
+glm.pred[glm.probs>0.5] = 1
+table(glm.pred, testing1$binary)
+mean(glm.pred == testing1$binary) # 1
+```
+
+```{r}
+library(pROC)
+glm.roc <- roc(testing1$binary, glm.pred)
+plot(glm.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+b.  GLM with elastic net
+
+```{r}
+library(glmnet)
+library(caret)
+# Set up 10-fold cross validation
+trctrl <- trainControl(method = "cv", number = 10)
+
+# Train elastic net model
+enetFit <- train(binary ~., data = training1, 
+                 method = "glmnet",
+                 trControl = trctrl,
+                 # alpha and lambda parameters to try
+                 tuneGrid = data.frame(alpha=0.5,
+                                       lambda=seq(0.1,0.9,0.1)))
+
+# best alpha and lambda values by cross-validation accuracy
+enetFit$bestTune
+
+# test accuracy 
+class.res <- predict(enetFit,testing1[,-562])
+enet.auc <- confusionMatrix(testing[,562],class.res)$overall[1] # 0.990133 
+enet.auc
+```
+
+```{r}
+enet.roc <- roc(testing1$binary, as.numeric(class.res))
+plot(enet.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+c.  Lasso regression
+
+```{r}
+# Run cross-validation and select best lambda
+mod_cv <- cv.glmnet(x = as.matrix(training1[,1:561]),y = training1$binary, 
+                    family = "binomial",intercept = F, alpha = 1)
+best_lambda <- mod_cv$lambda.min
+
+# Set up Lasso regression
+la.fit <- glmnet(x = as.matrix(training1[,1:561]),y = training1$binary,
+                 family = "binomial", alpha = 1, lambda = best_lambda)
+class.probs <- predict(la.fit,s = best_lambda, newx = as.matrix(testing1[,-562]))
+class.pred=rep(0, dim(testing1)[1])
+class.pred[class.probs>0.5] = 1
+table(class.pred, testing1$binary)
+mean(class.pred == testing1$binary) # 1
+```
+
+```{r}
+lasso.roc <- roc(testing1$binary, class.pred)
+plot(lasso.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+d.  Ridge regression
+
+```{r}
+cv_model <- cv.glmnet(x = as.matrix(training1[,1:561]),y = training1$binary, 
+                    family = "binomial",intercept = F, alpha = 0)
+best_lambda2 <- cv_model$lambda.min
+
+# Set up Ridge regression
+ridge.fit <- glmnet(x = as.matrix(training1[,1:561]),y = training1$binary,
+                 family = "binomial", alpha = 0, lambda = best_lambda2)
+class.probs2 <- predict(ridge.fit,s = best_lambda2, newx = as.matrix(testing1[,-562]))
+class.pred2 = rep(0, dim(testing1)[1])
+class.pred2[class.probs2>0.5] = 1
+mean(class.pred2 == testing1$binary) #0.999142
+```
+
+```{r}
+ridge.roc <- roc(testing1$binary, class.pred2)
+plot(ridge.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+e.  Linear Discriminant Analysis
+
+```{r}
+library(MASS)
+lda.fit <- lda(binary ~., data = training1)
+lda.pred <- predict(lda.fit, testing1)
+lda.class = lda.pred$class
+table(lda.class, testing1$binary)
+mean(lda.class == testing1$binary) # 1
+```
+
+```{r}
+lda.roc <- roc(testing1$binary, as.numeric(lda.class))
+plot(lda.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+f.  SVM
+
+```{r}
+library(e1071)
+svm.fit <- train(binary ~., data = training1, method = "svmLinear",
+                  trControl = trctrl)
+svm.pred <- predict(svm.fit, newdata = testing1)
+table(svm.pred, testing1$binary)
+mean(svm.pred == testing1$binary) # 1
+
+svm_fit = svm(binary~., data=training1, kernel="linear", 
+              cost=10, scale=FALSE)
+svm.pred = predict(svm.fit, testing1)
+table(svm.pred,testing1$binary)
+mean(svm.pred == testing1$binary) # 1
+```
+
+```{r}
+svm.roc <- roc(testing1$binary, as.numeric(svm.pred))
+plot(svm.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+SVM with radial
+
+```{r}
+svm_fit2 = svm(binary~., data=training1, kernel="radial", 
+               cost=10, scale=FALSE)
+svm.pred2 = predict(svm_fit2, testing1)
+table(svm.pred2,testing1$binary)
+mean(svm.pred2 == testing1$binary) # 0.999571
+```
+
+```{r}
+svm.roc2 <- roc(testing1$binary, as.numeric(svm.pred2))
+plot(svm.roc2, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+g.  Single Hidden-layer Neural Network
+
+```{r}
+library(neuralnet)
+nn.fit = neuralnet(binary ~., data=training1,
+                   hidden = 3, act.fct = "logistic",
+                   linear.output=F)
+nn.prob = predict(nn.fit, testing1)
+nn.pred = rep(0, dim(testing1)[1])
+nn.pred[nn.prob[,2]>=0.5] = 1
+table(nn.pred, testing1$binary)
+mean(nn.pred == testing1$binary) # 1
+```
+
+```{r}
+nn.roc <- roc(testing1$binary, nn.pred)
+plot(nn.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+i.  Adaboost
+
+```{r}
+library(adabag)
+ada.fit <- boosting(binary~., data=training1, mfinal=10)
+ada.prob = predict(ada.fit, testing1)$prob[,2]
+ada.pred = rep(0,length(ada.prob))
+ada.pred[ada.prob>=0.5]= 1
+table(ada.pred, testing1$binary)
+mean(ada.pred == testing1$binary) # 0.999142
+```
+
+```{r}
+ada.roc <- roc(testing1$binary, ada.pred)
+plot(ada.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+submit:
+
+```{r}
+data1 = training_data[, -563]
+trControl <- trainControl(method = "cv", number = 10)
+svm_submit1 <- train(binary ~., data = data1, method = "svmLinear",
+                 trControl = trControl)
+test.svm_submit1 <- predict(svm_submit1, newdata = test_data)
+submit1 <- data.frame(test.svm_submit1 = as.numeric(test.svm_submit1) - 1)
+write.table(submit1, file = "binary_2516.txt", row.names = F, col.names = F)
+```
+
+| Model          | Accuracy                                       |
+|----------------|------------------------------------------------|
+| Logistic       | 100%                                           |
+| Elastic Net    | `r enet.auc*100`%                              |
+| Lasso          | 100%                                           |
+| Ridge          | `r mean(class.pred2 == testing1\$binary)*100`% |
+| LDA            | 100%                                           |
+| SVM(linear)    | 100%                                           |
+| SVM(radial)    | 100%                                           |
+| Neural Network | 100%                                           |
+| Adaboost       | `r mean(add.pred == testing1$binary)*100`%    |
+
+**2. Multi-class Classifier**
+
+a\. bagging
+
+```{r}
+library(adabag)
+library(rpart)
+bag = bagging(multi ~ ., data = training2, mfinal = 10, 
+              control = rpart.control(maxdepth = 6))
+bag.pred = predict(bag, testing2)
+bag.pred$confusion
+1 - bag.pred$error # 0.8837409
+```
+
+b.  Adaboost
+
+```{r}
+boo = boosting(multi ~ ., data = training2, mfinal = 10,
+               control = rpart.control(maxdepth = 6))
+boo.pred = predict(boo, testing2)
+boo.pred$confusion
+1 - boo.pred$error # 0.967825
+```
+
+```{r}
+boo.roc <- roc(testing2$multi, as.numeric(boo.pred$class))
+plot(boo.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+c.  SVM
+
+```{r}
+svm_linear = svm(multi~., data=training2, kernel="linear", 
+              cost=10, scale=FALSE)
+svm_linear.pred = predict(svm_linear, testing2)
+table(svm_linear.pred,testing2$multi)
+mean(svm_linear.pred == testing2$multi) # 0.985414
+```
+
+```{r}
+svm_linear.roc <- roc(testing2$multi, as.numeric(svm_linear.pred))
+plot(svm_linear.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+```{r}
+svm.radial <- train(multi ~., data = training2, method = "svmRadial",
+                    trControl = ctrl)
+svm.radial.pred <- predict(svm.radial, newdata = testing2)
+table(svm.radial.pred, testing2$multi)
+mean(svm.radial.pred == testing2$multi) #  0.974689
+```
+
+```{r}
+svm.radial.roc <- roc(testing2$multi, as.numeric(svm.radial.pred))
+plot(svm.radial.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+d.  randomForest
+
+```{r}
+library(randomForest)
+rf <- randomForest(multi ~., data = training2, importance = T)
+rf.pred <- predict(rf, testing2[, -562], type = "class")
+confusionMatrix(rf.pred, testing2$multi)$overall[1] # 0.980695
+```
+
+```{r}
+rf.roc <- roc(testing2$multi, as.numeric(rf.pred))
+plot(rf.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+e.  bp neural network
+
+```{r}
+library(neuralnet)
+library(dplyr)
+bpnn <- neuralnet(multi ~., data = training2,
+                  hidden = 6, err.fct = "ce",
+                  linear.output=F, 
+                  stepmax = 100000, threshold = 0.01)
+
+nntest <- testing2
+nntest$one <- ifelse(testing2$multi == 1, 1, 0)
+nntest$two <- ifelse(testing2$multi == 2, 1, 0)
+nntest$thr <- ifelse(testing2$multi == 3, 1, 0)
+nntest$fou <- ifelse(testing2$multi == 4, 1, 0)
+nntest$fiv <- ifelse(testing2$multi == 5, 1, 0)
+nntest$six <- ifelse(testing2$multi == 6, 1, 0)
+nntest$sev <- ifelse(testing2$multi == 7, 1, 0)
+
+bpnn.result <- compute(bpnn, nntest)
+bpnn.pred <- c("one", "two", "thr", "fou", "fiv", "six", "sev")[apply(bpnn.result$net.result, 1, which.max)]%>%
+  as.data.frame()
+
+bpnn.pred.num <- bpnn.pred %>%
+  mutate(pred = case_when(
+    bpnn.pred == 'one' ~ 1,
+    bpnn.pred == 'two' ~ 2,
+    bpnn.pred == 'thr' ~ 3,
+    bpnn.pred == 'fou' ~ 4,
+    bpnn.pred == 'fiv' ~ 5,
+    bpnn.pred == 'six' ~ 6,
+    bpnn.pred == 'sev' ~ 7,
+    ))
+
+bpnn_pred <- bpnn.pred.num[[2]] %>% as.factor()
+confusionMatrix(bpnn_pred, testing2$multi)$overall[1] #0.96139 
+```
+
+```{r}
+bpnn.roc <- roc(testing2$multi, as.numeric(bpnn_pred))
+plot(bpnnl.roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+f.  LDA
+
+```{r}
+library(MASS)
+lda <- lda(multi ~., data = training2)
+lda_pred <- predict(lda, testing2)
+table(lda_pred$class, testing2$multi)
+mean(lda_pred$class == testing2$multi) # 0.980695
+```
+
+```{r}
+lda_roc <- roc(testing2$multi, as.numeric(lda_pred$class))
+plot(lda_roc, print.auc=TRUE, auc.polygon=TRUE, grid=c(0.1, 0.2), grid.col=c("green", "red"), max.auc.polygon=TRUE, auc.polygon.col="skyblue", print.thres=TRUE)
+```
+
+submit:
+
+```{r}
+data2 = training_data[, -562]
+svm_submit2 <- train(multi ~., data = data2,method = "svmLinear", trControl = ctrl)
+test.svm_submit2 <- predict(svm_submit2, newdata = test_data)
+submit2 <- data.frame(test.svm_submit2 = as.numeric(test.svm_submit2))
+write.table(submit2, file = "multiclass_2516.txt", row.names = F, col.names = F)
+```
+
+| Model          | Accuracy |
+|----------------|----------|
+| Bagging        | `r 1 - bag.pred$error `%       |
+| Adaboost       | `r 1 - boo.pred$error `%       |
+| SVM(linear)    | `r mean(svm_linear.pred == testing2$multi)`%       |
+| SVM(radial)    | `r mean(svm.radial.pred == testing2$multi)`%       |
+| Randomforest   | `r confusionMatrix(rf.pred, testing2$multi)$overall[1]`%       |
+| Neural Network | `r confusionMatrix(bpnn_pred, testing2$multi)$overall[1]`%       |
+| LDA            | `r mean(lda_pred$class == testing2$multi)`%       |
