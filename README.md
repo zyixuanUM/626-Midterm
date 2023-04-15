@@ -1,6 +1,5 @@
 # 626-Midterm
 
-<br/>
 ## 1. Binary Classifier
 <br/>
 a. Logistic regression 
