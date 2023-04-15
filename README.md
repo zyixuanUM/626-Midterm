@@ -6,7 +6,7 @@ A group of volunteers, aged between 19 and 48, are recruited to participate in t
 
 ## Data files 
 
-There are two data files in this code. One is the "training data", used the check whether the model fits well and compute and plot the accuracy by the pROC package to see the difference between them. Another data file is the "test data", for which to create the submitted files and check the accuracy through the leaderboard, then try the best to improve it. 
+There are two data files in this code. One is the "training data", used to check whether the model fits well and compute and plot the accuracy by the pROC package to see the difference between them. Another data file is the "test data", for which to create the submitted files and check the accuracy through the leaderboard, then try the best to improve it. 
 
 ## Methods
 In this projects' classifier, we use several methods to build classifiers, such as logistic regression, GLM with elastic net, lasso regression, ridge regression, linear discriminant analysis, SVM with linear kernel or radial kernel, neural network, adaboost, bagging, randomforest, etc. Through these models, use different packages and diffrent parameters to adjust the results, in order to get the best answer. One of the method and accuracy of them are as follows. Most of the functions come from the caret package and other required packages.
