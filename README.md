@@ -62,9 +62,7 @@ Accuracy:  99.91%
 <br/>
 
 ## 2. Multi-class Classifier
-<br/>
 Build a refined multi-class classifier to classify walking (1), walking_upstairs (2), walking_downstairs (3), sitting (4), standing (5), lying (6), and static postural transition (7)
-
 <br/>
 
 a. Bagging
